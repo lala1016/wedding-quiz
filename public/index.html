@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>婚禮問答遊戲 💍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #fdf6ec;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    --brown: #5c3d2e;
+    --blush: #e8b4b8;
+    --rose: #c97b84;
+    --dark: #2c1810;
+    --white: #fffef9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Decorative bg ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(201,168,76,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 80%, rgba(232,180,184,0.12) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  /* ── SCREEN MANAGEMENT ── */
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+
+  /* ── JOIN SCREEN ── */
+  #screen-join {
+    text-align: center;
+    gap: 0;
+  }
+
+  .logo-area {
+    margin-bottom: 32px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .logo-rings {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 2px 8px rgba(201,168,76,0.3));
+  }
+
+  .logo-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--brown);
+    letter-spacing: 4px;
+  }
+
+  .logo-subtitle {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 3px;
+    margin-top: 4px;
+  }
+
+  .join-card {
+    background: var(--white);
+    border-radius: 24px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 8px 40px rgba(92,61,46,0.1), 0 2px 8px rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.2);
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .join-card h2 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    color: var(--brown);
+    margin-bottom: 24px;
+    font-weight: 700;
+  }
+
+  .field {
+    margin-bottom: 16px;
+    text-align: left;
+  }
+
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--brown);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .field input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid var(--gold-light);
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--cream);
+    color: var(--dark);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .field input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+  }
+
+  .field input.name-input { text-transform: none; letter-spacing: normal; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--gold), #b8892a);
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 16px rgba(201,168,76,0.3);
+    margin-top: 8px;
+  }
+
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:hover { box-shadow: 0 6px 24px rgba(201,168,76,0.4); }
+
+  .err-msg {
+    color: var(--rose);
+    font-size: 13px;
+    margin-top: 10px;
+    text-align: center;
+    display: none;
+  }
+  .err-msg.show { display: block; }
+
+  /* ── WAITING SCREEN ── */
+  #screen-wait {
+    text-align: center;
+    gap: 20px;
+  }
+
+  .wait-icon {
+    font-size: 64px;
+    animation: pulse 2s infinite;
+  }
+
+  .wait-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--brown);
+  }
+
+  .wait-name {
+    font-size: 14px;
+    color: #888;
+  }
+
+  .wait-name span {
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  .player-count-badge {
+    background: var(--white);
+    border: 1.5px solid var(--gold-light);
+    border-radius: 50px;
+    padding: 8px 20px;
+    font-size: 14px;
+    color: var(--brown);
+  }
+
+  .player-count-badge strong { color: var(--gold); font-size: 18px; }
+
+  /* ── QUESTION SCREEN ── */
+  #screen-question {
+    justify-content: flex-start;
+    padding-top: 20px;
+    gap: 16px;
+  }
+
+  .q-header {
+    width: 100%; max-width: 500px;
+    display: flex; align-items: center; justify-content: space-between;
+    animation: fadeDown 0.4s ease both;
+  }
+
+  .q-progress {
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .q-timer-wrap {
+    position: relative;
+    width: 52px; height: 52px;
+  }
+
+  .q-timer-svg {
+    width: 52px; height: 52px;
+    transform: rotate(-90deg);
+  }
+
+  .q-timer-bg { fill: none; stroke: var(--gold-light); stroke-width: 4; }
+  .q-timer-ring {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 138;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+  }
+
+  .q-timer-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: var(--brown);
+  }
+
+  .q-card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    width: 100%; max-width: 500px;
+    box-shadow: 0 4px 24px rgba(92,61,46,0.08);
+    border: 1px solid rgba(201,168,76,0.15);
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .q-text {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    color: var(--dark);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .q-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .opt-btn {
+    padding: 14px 10px;
+    border-radius: 14px;
+    border: 2px solid var(--gold-light);
+    background: var(--cream);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--dark);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    line-height: 1.4;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .opt-btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.08);
+  }
+
+  .opt-btn:active:not(:disabled) { transform: scale(0.97); }
+
+  .opt-btn .opt-key {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .opt-btn.selected {
+    background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1));
+    border-color: var(--gold);
+    transform: scale(0.98);
+  }
+
+  .opt-btn:disabled { cursor: default; }
+
+  /* ── ANSWER SCREEN ── */
+  #screen-answer {
+    justify-content: flex-start;
+    padding-top: 20px;
+    gap: 14px;
+  }
+
+  .ans-header {
+    width: 100%; max-width: 500px;
+    text-align: center;
+  }
+
+  .ans-correct-banner {
+    background: linear-gradient(135deg, var(--gold), #b8892a);
+    color: var(--white);
+    border-radius: 16px;
+    padding: 16px 20px;
+    width: 100%; max-width: 500px;
+    text-align: center;
+    animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  .ans-correct-banner .label { font-size: 12px; letter-spacing: 2px; opacity: 0.85; }
+  .ans-correct-banner .answer { font-family: 'Noto Serif TC', serif; font-size: 20px; font-weight: 900; margin-top: 4px; }
+
+  .ans-my-result {
+    width: 100%; max-width: 500px;
+    text-align: center;
+    font-size: 14px;
+    color: #888;
+    animation: fadeUp 0.4s 0.2s ease both;
+  }
+
+  .ans-my-result .result-emoji { font-size: 28px; display: block; margin-bottom: 4px; }
+  .ans-my-result.correct-result { color: var(--gold); }
+  .ans-my-result.wrong-result { color: var(--rose); }
+
+  .ans-stats {
+    width: 100%; max-width: 500px;
+    background: var(--white);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(92,61,46,0.06);
+    border: 1px solid rgba(201,168,76,0.12);
+    animation: fadeUp 0.4s 0.3s ease both;
+  }
+
+  .ans-stats h3 {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+
+  .stat-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .stat-key {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--brown);
+    width: 16px;
+    text-align: center;
+  }
+
+  .stat-bar-wrap {
+    flex: 1;
+    height: 24px;
+    background: var(--cream);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: var(--gold-light);
+    transition: width 0.8s cubic-bezier(0.34,1.1,0.64,1);
+    display: flex; align-items: center; padding-left: 8px;
+    font-size: 11px; font-weight: 700; color: var(--brown);
+  }
+
+  .stat-bar-fill.is-correct {
+    background: linear-gradient(90deg, var(--gold), #d4a843);
+    color: var(--white);
+  }
+
+  .stat-count {
+    font-size: 12px;
+    color: #aaa;
+    width: 28px;
+    text-align: right;
+  }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard-card {
+    width: 100%; max-width: 500px;
+    background: var(--white);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(92,61,46,0.06);
+    border: 1px solid rgba(201,168,76,0.12);
+    animation: fadeUp 0.4s 0.5s ease both;
+  }
+
+  .leaderboard-card h3 {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+  }
+
+  .lb-row:last-child { border-bottom: none; }
+
+  .lb-rank {
+    font-size: 20px;
+    width: 32px;
+    text-align: center;
+  }
+
+  .lb-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--dark);
+  }
+
+  .lb-score {
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* ── FINISH SCREEN ── */
+  #screen-finish {
+    text-align: center;
+    gap: 20px;
+  }
+
+  .finish-emoji { font-size: 64px; animation: pop 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+  .finish-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--brown);
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  .next-hint {
+    font-size: 12px;
+    color: #aaa;
+    animation: pulse 1.5s infinite;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ── JOIN ── -->
+<div id="screen-join" class="screen active">
+  <div class="logo-area">
+    <div class="logo-rings">💍</div>
+    <div class="logo-title">婚禮問答</div>
+    <div class="logo-subtitle">WEDDING QUIZ</div>
+  </div>
+  <div class="join-card">
+    <h2>加入遊戲</h2>
+    <div class="field">
+      <label>遊戲驗證碼</label>
+      <input id="inp-code" type="text" placeholder="輸入6位驗證碼" maxlength="6" autocomplete="off" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>你的暱稱</label>
+      <input id="inp-name" type="text" placeholder="輸入名字（最多12字）" maxlength="12" class="name-input">
+    </div>
+    <button class="btn-primary" onclick="joinGame()">進入遊戲 ✨</button>
+    <div class="err-msg" id="join-err"></div>
+  </div>
+</div>
+
+<!-- ── WAITING ── -->
+<div id="screen-wait" class="screen">
+  <div class="wait-icon">⏳</div>
+  <div class="wait-title">等待遊戲開始</div>
+  <div class="wait-name">你好，<span id="wait-name-display"></span>！</div>
+  <div class="player-count-badge">目前已有 <strong id="player-count">0</strong> 人加入</div>
+  <div style="font-size:13px;color:#aaa;">主持人開始後自動進入遊戲</div>
+</div>
+
+<!-- ── QUESTION ── -->
+<div id="screen-question" class="screen">
+  <div class="q-header">
+    <div class="q-progress">第 <span id="q-current">1</span> 題 / 共 <span id="q-total">10</span> 題</div>
+    <div class="q-timer-wrap">
+      <svg class="q-timer-svg" viewBox="0 0 52 52">
+        <circle class="q-timer-bg" cx="26" cy="26" r="22"/>
+        <circle class="q-timer-ring" id="timer-ring" cx="26" cy="26" r="22"/>
+      </svg>
+      <div class="q-timer-num" id="timer-num">20</div>
+    </div>
+  </div>
+  <div class="q-card">
+    <div class="q-text" id="q-text">題目載入中...</div>
+    <div class="q-options" id="q-options"></div>
+  </div>
+  <div id="q-answered-msg" style="display:none;font-size:13px;color:var(--gold);font-weight:700;letter-spacing:1px;">✅ 已作答，等待結果...</div>
+</div>
+
+<!-- ── ANSWER ── -->
+<div id="screen-answer" class="screen">
+  <div class="ans-header">
+    <div style="font-size:12px;color:var(--gold);letter-spacing:2px;font-weight:700;">第 <span id="a-current">1</span> 題結果</div>
+  </div>
+  <div class="ans-correct-banner">
+    <div class="label">正確答案</div>
+    <div class="answer" id="a-correct-text">—</div>
+  </div>
+  <div class="ans-my-result" id="a-my-result">
+    <span class="result-emoji" id="a-result-emoji">—</span>
+    <span id="a-result-text">—</span>
+  </div>
+  <div class="ans-stats">
+    <h3>📊 選項分佈</h3>
+    <div id="a-stat-bars"></div>
+  </div>
+  <div class="leaderboard-card">
+    <h3>🏆 即時前三名</h3>
+    <div id="a-leaderboard"></div>
+  </div>
+  <div class="next-hint" id="next-hint">下一題即將開始...</div>
+</div>
+
+<!-- ── FINISH ── -->
+<div id="screen-finish" class="screen">
+  <div class="finish-emoji">🎊</div>
+  <div class="finish-title">遊戲結束！</div>
+  <div class="leaderboard-card" style="max-width:380px;">
+    <h3>🏆 最終排名</h3>
+    <div id="f-leaderboard"></div>
+  </div>
+  <div style="font-size:13px;color:#aaa;">感謝參與！祝新人百年好合 💕</div>
+</div>
+
+</div><!-- /page -->
+<script>
+const WS_URL = location.protocol === 'https:' ? `wss://${location.host}` : `ws://${location.host}`;
+
+// Auto-fill code from QR URL param
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (code) {
+    document.getElementById('inp-code').value = code.toUpperCase();
+    document.getElementById('inp-name').focus();
+  }
+});
+let ws, myName = '', myAnswer = null, timerInterval = null;
+let currentCorrect = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+async function joinGame() {
+  const code = document.getElementById('inp-code').value.trim().toUpperCase();
+  const name = document.getElementById('inp-name').value.trim() || '匿名賓客';
+
+  if (!code || code.length < 4) { showErr('join-err', '請輸入正確的驗證碼'); return; }
+
+  // Verify code first via REST
+  try {
+    const res = await fetch(`/api/games/${code}`);
+    if (!res.ok) {
+      const data = await res.json();
+      showErr('join-err', data.error || '找不到遊戲，請確認驗證碼');
+      return;
+    }
+    const gameData = await res.json();
+    if (gameData.status !== 'waiting') {
+      showErr('join-err', '遊戲已開始，無法加入');
+      return;
+    }
+  } catch(e) {
+    showErr('join-err', '連線失敗，請稍後再試');
+    return;
+  }
+
+  myName = name;
+  document.getElementById('wait-name-display').textContent = name;
+
+  connectWS(code, name);
+}
+
+function connectWS(gameCode, name) {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'player_join', gameCode, name }));
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleMessage(msg);
+  };
+
+  ws.onclose = () => {};
+  ws.onerror = () => { showErr('join-err', '連線失敗，請重新整理'); };
+}
+
+function handleMessage(msg) {
+  switch(msg.type) {
+    case 'error':
+      showErr('join-err', msg.message);
+      break;
+
+    case 'joined':
+      showScreen('wait');
+      break;
+
+    case 'player_count':
+      document.getElementById('player-count').textContent = msg.count;
+      break;
+
+    case 'question_start':
+      startQuestion(msg);
+      break;
+
+    case 'question_end':
+      showAnswer(msg);
+      break;
+
+    case 'game_finished':
+      showFinish(msg);
+      break;
+
+    case 'game_deleted':
+      alert('主持人已刪除此場遊戲。');
+      location.reload();
+      break;
+  }
+}
+
+function startQuestion(msg) {
+  myAnswer = null;
+  currentCorrect = null;
+  showScreen('question');
+  document.getElementById('q-current').textContent = msg.questionIndex + 1;
+  document.getElementById('q-total').textContent = msg.total;
+  document.getElementById('q-text').textContent = msg.question;
+  document.getElementById('q-answered-msg').style.display = 'none';
+
+  const optWrap = document.getElementById('q-options');
+  const keys = ['A','B','C','D'];
+  optWrap.innerHTML = '';
+  msg.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-key">${keys[i]}</span>${opt}`;
+    btn.onclick = () => submitAnswer(keys[i], btn);
+    optWrap.appendChild(btn);
+  });
+
+  startTimer(msg.duration);
+}
+
+function startTimer(duration) {
+  if (timerInterval) clearInterval(timerInterval);
+  let remaining = duration;
+  const ring = document.getElementById('timer-ring');
+  const num = document.getElementById('timer-num');
+  const circumference = 138;
+
+  const update = () => {
+    num.textContent = remaining;
+    const offset = circumference * (1 - remaining / duration);
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = remaining <= 5 ? '#c97b84' : 'var(--gold)';
+    if (remaining <= 0) { clearInterval(timerInterval); }
+  };
+
+  update();
+  timerInterval = setInterval(() => {
+    remaining--;
+    update();
+    if (remaining <= 0) clearInterval(timerInterval);
+  }, 1000);
+}
+
+function submitAnswer(key, btn) {
+  if (myAnswer !== null) return;
+  myAnswer = key;
+  document.querySelectorAll('.opt-btn').forEach(b => {
+    b.disabled = true;
+    b.classList.remove('selected');
+  });
+  btn.classList.add('selected');
+  document.getElementById('q-answered-msg').style.display = 'block';
+  ws.send(JSON.stringify({ type: 'submit_answer', answer: key }));
+}
+
+function showAnswer(msg) {
+  if (timerInterval) clearInterval(timerInterval);
+  showScreen('answer');
+
+  document.getElementById('a-current').textContent = msg.questionIndex + 1;
+  document.getElementById('a-correct-text').textContent = `${msg.correct}. ${msg.correctText}`;
+
+  // My result
+  const myResultEl = document.getElementById('a-my-result');
+  const emoji = document.getElementById('a-result-emoji');
+  const text = document.getElementById('a-result-text');
+  if (myAnswer === null) {
+    emoji.textContent = '😶';
+    text.textContent = '未作答';
+    myResultEl.className = 'ans-my-result';
+  } else if (myAnswer === msg.correct) {
+    emoji.textContent = '🎉';
+    text.textContent = '答對了！';
+    myResultEl.className = 'ans-my-result correct-result';
+  } else {
+    emoji.textContent = '😅';
+    text.textContent = `你選了 ${myAnswer}，答錯囉`;
+    myResultEl.className = 'ans-my-result wrong-result';
+  }
+
+  // Stats bars
+  const maxCount = Math.max(...msg.stats.map(s => s.count), 1);
+  const barsWrap = document.getElementById('a-stat-bars');
+  barsWrap.innerHTML = '';
+  msg.stats.forEach(s => {
+    const pct = Math.round((s.count / maxCount) * 100);
+    barsWrap.innerHTML += `
+      <div class="stat-bar-item">
+        <div class="stat-key">${s.key}</div>
+        <div class="stat-bar-wrap">
+          <div class="stat-bar-fill ${s.isCorrect ? 'is-correct' : ''}" style="width:${Math.max(pct,4)}%">
+            ${s.isCorrect ? '✓' : ''}
+          </div>
+        </div>
+        <div class="stat-count">${s.count}</div>
+      </div>`;
+  });
+
+  // Leaderboard
+  renderLeaderboard('a-leaderboard', msg.leaderboard);
+
+  // Next hint
+  const hint = document.getElementById('next-hint');
+  if (msg.isLast) {
+    hint.textContent = '最後一題！即將公布結果...';
+  } else {
+    hint.textContent = '下一題即將開始...';
+  }
+}
+
+function renderLeaderboard(elId, lb) {
+  const el = document.getElementById(elId);
+  const medals = ['🥇','🥈','🥉'];
+  if (!lb || lb.length === 0) {
+    el.innerHTML = '<div style="font-size:13px;color:#aaa;text-align:center;padding:8px">尚無排名</div>';
+    return;
+  }
+  el.innerHTML = lb.map((p, i) => `
+    <div class="lb-row">
+      <div class="lb-rank">${medals[i] || i+1}</div>
+      <div class="lb-name">${p.name}</div>
+      <div class="lb-score">${p.correct}/${p.total} 答對 · ${Math.round(p.correctRate*100)}%</div>
+    </div>`).join('');
+}
+
+function showFinish(msg) {
+  showScreen('finish');
+  renderLeaderboard('f-leaderboard', msg.leaderboard);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>後台管理 – 婚禮問答</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- QR Code library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --cream: #fdf6ec;
+  --gold: #c9a84c;
+  --gold-light: #e8d5a3;
+  --brown: #5c3d2e;
+  --blush: #e8b4b8;
+  --rose: #c97b84;
+  --dark: #2c1810;
+  --white: #fffef9;
+  --green: #5a9a6f;
+  --red: #c97b84;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--cream); font-family:'Noto Sans TC',sans-serif; color:var(--dark); min-height:100vh; }
+
+/* ── Login ── */
+#login-screen {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:100vh; padding:24px; background:var(--cream);
+}
+.login-box {
+  background:var(--white); border-radius:24px; padding:40px 32px;
+  width:100%; max-width:360px;
+  box-shadow:0 8px 40px rgba(92,61,46,0.1); border:1px solid rgba(201,168,76,0.2);
+}
+.login-box h1 { font-family:'Noto Serif TC',serif; font-size:22px; color:var(--brown); margin-bottom:8px; }
+.login-box p { font-size:13px; color:#aaa; margin-bottom:28px; }
+
+/* ── Main ── */
+#main-screen { display:none; }
+
+.topbar {
+  background:var(--brown);
+  color:var(--white);
+  padding:16px 24px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 2px 12px rgba(0,0,0,0.15);
+}
+.topbar h1 { font-family:'Noto Serif TC',serif; font-size:18px; font-weight:900; }
+.topbar .logout-btn {
+  background:rgba(255,255,255,0.15); border:none; color:var(--white);
+  padding:6px 14px; border-radius:8px; cursor:pointer; font-size:13px; font-family:inherit;
+}
+
+.content { max-width:900px; margin:0 auto; padding:24px 16px; }
+
+.section {
+  background:var(--white); border-radius:20px; padding:24px;
+  margin-bottom:24px; box-shadow:0 4px 20px rgba(92,61,46,0.06);
+  border:1px solid rgba(201,168,76,0.12);
+}
+.section h2 {
+  font-family:'Noto Serif TC',serif; font-size:17px; color:var(--brown);
+  margin-bottom:20px; display:flex; align-items:center; gap:8px;
+}
+
+/* ── Form fields ── */
+.field { margin-bottom:16px; }
+.field label { display:block; font-size:13px; font-weight:500; color:var(--brown); margin-bottom:6px; }
+.field input, .field textarea, .field select {
+  width:100%; padding:11px 14px;
+  border:1.5px solid var(--gold-light); border-radius:10px;
+  font-size:14px; font-family:inherit; background:var(--cream); color:var(--dark);
+  outline:none; transition:border-color 0.2s;
+  resize:vertical;
+}
+.field input:focus, .field textarea:focus { border-color:var(--gold); }
+
+/* ── Questions builder ── */
+.questions-list { display:flex; flex-direction:column; gap:16px; margin-bottom:16px; }
+
+.q-item {
+  background:var(--cream); border-radius:14px; padding:16px;
+  border:1.5px solid var(--gold-light); position:relative;
+}
+.q-item-header {
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;
+}
+.q-num { font-weight:700; color:var(--gold); font-size:14px; }
+.q-del {
+  background:none; border:none; color:var(--rose); cursor:pointer;
+  font-size:13px; padding:4px 8px; border-radius:6px;
+  transition:background 0.2s;
+}
+.q-del:hover { background:rgba(201,123,132,0.1); }
+
+.options-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.options-row input { font-size:13px; }
+
+.correct-select { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.correct-btn {
+  padding:5px 14px; border-radius:20px; border:1.5px solid var(--gold-light);
+  background:var(--white); cursor:pointer; font-size:13px; font-family:inherit;
+  transition:all 0.15s;
+}
+.correct-btn.active {
+  background:var(--gold); border-color:var(--gold); color:var(--white); font-weight:700;
+}
+
+/* ── Buttons ── */
+.btn { padding:11px 20px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; transition:all 0.15s; }
+.btn-gold { background:linear-gradient(135deg, var(--gold), #b8892a); color:var(--white); box-shadow:0 3px 12px rgba(201,168,76,0.3); }
+.btn-gold:hover { box-shadow:0 5px 18px rgba(201,168,76,0.4); }
+.btn-outline { background:transparent; border:1.5px solid var(--gold-light); color:var(--brown); }
+.btn-outline:hover { border-color:var(--gold); background:rgba(201,168,76,0.06); }
+.btn-red { background:rgba(201,123,132,0.1); color:var(--rose); border:1.5px solid var(--rose); }
+.btn-red:hover { background:rgba(201,123,132,0.2); }
+.btn-green { background:linear-gradient(135deg, var(--green), #4a8a5f); color:var(--white); }
+
+/* ── Game cards ── */
+.game-list { display:flex; flex-direction:column; gap:14px; }
+
+.game-card {
+  background:var(--cream); border-radius:14px; padding:16px 18px;
+  border:1.5px solid var(--gold-light);
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+}
+.game-card-info { flex:1; min-width:200px; }
+.game-code {
+  font-family:'Noto Serif TC',serif; font-size:28px; font-weight:900;
+  color:var(--brown); letter-spacing:6px;
+}
+.game-meta { font-size:12px; color:#aaa; margin-top:2px; }
+.game-status {
+  display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:700; letter-spacing:1px;
+}
+.status-waiting { background:rgba(201,168,76,0.15); color:var(--gold); }
+.status-question, .status-answer { background:rgba(90,154,111,0.15); color:var(--green); }
+.status-finished { background:rgba(201,123,132,0.1); color:var(--rose); }
+
+.game-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ── QR Modal ── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.5);
+  display:none; align-items:center; justify-content:center; z-index:200;
+  padding:24px;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:var(--white); border-radius:24px; padding:32px;
+  max-width:380px; width:100%; text-align:center;
+  box-shadow:0 16px 60px rgba(0,0,0,0.2);
+  animation:fadeUp 0.3s ease both;
+}
+.modal h2 { font-family:'Noto Serif TC',serif; font-size:20px; color:var(--brown); margin-bottom:6px; }
+.modal p { font-size:13px; color:#aaa; margin-bottom:20px; }
+.modal-code { font-size:40px; font-weight:900; letter-spacing:8px; color:var(--brown); margin-bottom:20px; }
+#qr-container { display:flex; justify-content:center; margin-bottom:16px; }
+#qr-container canvas, #qr-container img { border-radius:12px; }
+.modal-url { font-size:11px; color:#aaa; word-break:break-all; margin-bottom:20px; }
+.modal-close { background:none; border:1.5px solid var(--gold-light); color:var(--brown); padding:8px 24px; border-radius:10px; cursor:pointer; font-family:inherit; font-size:14px; }
+
+/* ── Admin game control ── */
+.control-panel {
+  background:var(--cream); border-radius:14px; padding:16px;
+  border:1.5px solid rgba(90,154,111,0.3); margin-top:12px;
+  display:none;
+}
+.control-panel.show { display:block; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Toast ── */
+.toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  background:var(--dark); color:var(--white); padding:10px 24px;
+  border-radius:50px; font-size:14px; z-index:300;
+  opacity:0; pointer-events:none; transition:opacity 0.3s;
+}
+.toast.show { opacity:1; }
+
+.empty-state { text-align:center; padding:40px; color:#aaa; font-size:14px; }
+
+.field input[type=password] { letter-spacing:4px; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>💍 後台管理</h1>
+    <p>請輸入管理員密碼</p>
+    <div class="field">
+      <label>密碼</label>
+      <input type="password" id="login-pwd" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-gold" style="width:100%" onclick="doLogin()">登入</button>
+    <div id="login-err" style="color:var(--rose);font-size:13px;margin-top:10px;text-align:center;display:none"></div>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main-screen">
+  <div class="topbar">
+    <h1>💍 婚禮問答後台</h1>
+    <button class="logout-btn" onclick="logout()">登出</button>
+  </div>
+  <div class="content">
+
+    <!-- Game list -->
+    <div class="section">
+      <h2>🎮 遊戲列表</h2>
+      <div class="game-list" id="game-list">
+        <div class="empty-state">尚無遊戲，請在下方建立</div>
+      </div>
+    </div>
+
+    <!-- Create game -->
+    <div class="section">
+      <h2>➕ 建立新遊戲</h2>
+      <div class="questions-list" id="questions-list"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="addQuestion()">＋ 新增題目</button>
+        <button class="btn btn-gold" onclick="createGame()">建立遊戲 🎉</button>
+      </div>
+      <div id="create-err" style="color:var(--rose);font-size:13px;margin-top:10px;display:none"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal">
+    <h2>遊戲驗證碼</h2>
+    <p>請展示給賓客掃描 QR Code 加入遊戲</p>
+    <div class="modal-code" id="modal-code-text">——</div>
+    <div id="qr-container"></div>
+    <div class="modal-url" id="modal-url"></div>
+    <button class="modal-close" onclick="closeQR()">關閉</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const ADMIN_PWD_KEY = 'wq_admin_pwd';
+let adminPassword = '';
+let gameWsMap = {}; // gameCode -> ws
+let qrInstances = {};
+
+// ── Login ──────────────────────────────────────────────────
+async function doLogin() {
+  const pwd = document.getElementById('login-pwd').value.trim();
+  const res = await fetch('/api/admin/login', {
+    method: 'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: pwd })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    adminPassword = pwd;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+    loadGames();
+  } else {
+    const err = document.getElementById('login-err');
+    err.textContent = data.error || '密碼錯誤'; err.style.display = 'block';
+    setTimeout(() => err.style.display = 'none', 3000);
+  }
+}
+
+function logout() {
+  adminPassword = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-pwd').value = '';
+}
+
+// ── Load games ─────────────────────────────────────────────
+async function loadGames() {
+  const res = await fetch(`/api/admin/games?password=${adminPassword}`);
+  const list = await res.json();
+  renderGameList(list);
+}
+
+function statusLabel(s) {
+  const map = { waiting:'等待中', question:'進行中', answer:'公布答案', finished:'已結束' };
+  return map[s] || s;
+}
+function statusClass(s) {
+  if (s === 'finished') return 'status-finished';
+  if (s === 'waiting') return 'status-waiting';
+  return 'status-question';
+}
+
+function renderGameList(list) {
+  const el = document.getElementById('game-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state">尚無遊戲，請在下方建立</div>';
+    return;
+  }
+  el.innerHTML = list.map(g => `
+    <div class="game-card" id="gcard-${g.code}">
+      <div class="game-card-info">
+        <div class="game-code">${g.code}</div>
+        <div class="game-meta">
+          <span class="game-status ${statusClass(g.status)}">${statusLabel(g.status)}</span>
+          　${g.questionCount} 題　·　${g.playerCount} 人加入
+        </div>
+      </div>
+      <div class="game-card-actions">
+        <button class="btn btn-outline" onclick="showQR('${g.code}')">📱 QR Code</button>
+        ${g.status === 'waiting' ? `<button class="btn btn-green" onclick="adminControlGame('${g.code}')">🎯 控制台</button>` : ''}
+        <button class="btn btn-red" onclick="deleteGame('${g.code}')">🗑 刪除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Create game ────────────────────────────────────────────
+function addQuestion(q = null) {
+  const list = document.getElementById('questions-list');
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'q-item';
+  div.innerHTML = `
+    <div class="q-item-header">
+      <span class="q-num">第 ${idx + 1} 題</span>
+      <button class="q-del" onclick="this.closest('.q-item').remove();renumberQs()">✕ 刪除</button>
+    </div>
+    <div class="field">
+      <label>題目</label>
+      <textarea rows="2" placeholder="輸入題目...">${q ? q.question : ''}</textarea>
+    </div>
+    <div class="options-row">
+      <input placeholder="A. 選項" value="${q ? q.options[0] : ''}">
+      <input placeholder="B. 選項" value="${q ? q.options[1] : ''}">
+      <input placeholder="C. 選項" value="${q ? q.options[2] : ''}">
+      <input placeholder="D. 選項" value="${q ? q.options[3] : ''}">
+    </div>
+    <div style="font-size:12px;color:var(--brown);margin-top:10px;font-weight:500;">正確答案：</div>
+    <div class="correct-select">
+      ${['A','B','C','D'].map(k => `
+        <button class="correct-btn ${q && q.correct === k ? 'active' : ''}" onclick="setCorrect(this,'${k}')">${k}</button>
+      `).join('')}
+    </div>
+  `;
+  list.appendChild(div);
+}
+
+function renumberQs() {
+  document.querySelectorAll('.q-item .q-num').forEach((el, i) => {
+    el.textContent = `第 ${i + 1} 題`;
+  });
+}
+
+function setCorrect(btn, key) {
+  btn.closest('.correct-select').querySelectorAll('.correct-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.dataset.key = key;
+}
+
+function collectQuestions() {
+  const items = document.querySelectorAll('.q-item');
+  const questions = [];
+  for (const item of items) {
+    const inputs = item.querySelectorAll('input');
+    const ta = item.querySelector('textarea');
+    const activeBtn = item.querySelector('.correct-btn.active');
+    if (!ta.value.trim()) continue;
+    const opts = Array.from(inputs).map(i => i.value.trim());
+    questions.push({
+      question: ta.value.trim(),
+      options: opts,
+      correct: activeBtn ? activeBtn.dataset.key || activeBtn.textContent.trim() : 'A'
+    });
+  }
+  return questions;
+}
+
+async function createGame() {
+  const questions = collectQuestions();
+  const errEl = document.getElementById('create-err');
+  if (questions.length === 0) {
+    errEl.textContent = '請至少新增一題'; errEl.style.display = 'block';
+    setTimeout(() => errEl.style.display = 'none', 3000); return;
+  }
+  const missingOpts = questions.find(q => q.options.some(o => !o));
+  if (missingOpts) {
+    errEl.textContent = '請填寫所有選項'; errEl.style.display = 'block';
+    setTimeout(() => errEl.style.display = 'none', 3000); return;
+  }
+
+  const res = await fetch('/api/admin/games', {
+    method: 'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: adminPassword, questions })
+  });
+  const data = await res.json();
+  if (data.code) {
+    showToast(`遊戲建立成功！驗證碼：${data.code}`);
+    document.getElementById('questions-list').innerHTML = '';
+    loadGames();
+    setTimeout(() => showQR(data.code), 500);
+  } else {
+    errEl.textContent = data.error || '建立失敗'; errEl.style.display = 'block';
+  }
+}
+
+// ── Delete game ────────────────────────────────────────────
+async function deleteGame(code) {
+  if (!confirm(`確定要刪除遊戲 ${code} 嗎？\n這會踢掉所有已加入的賓客。`)) return;
+  const res = await fetch(`/api/admin/games/${code}`, {
+    method: 'DELETE', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: adminPassword })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    showToast(`已刪除遊戲 ${code}`);
+    loadGames();
+  }
+}
+
+// ── Admin control via WebSocket ────────────────────────────
+function adminControlGame(code) {
+  // Check if ws already open
+  if (gameWsMap[code]) {
+    gameWsMap[code].close();
+  }
+
+  const WS_URL = location.protocol === 'https:' ? `wss://${location.host}` : `ws://${location.host}`;
+  const ws = new WebSocket(WS_URL);
+  gameWsMap[code] = ws;
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'admin_join', password: adminPassword, gameCode: code }));
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'admin_joined') {
+      showControlPanel(code, ws);
+    }
+    if (msg.type === 'player_count') {
+      const el = document.getElementById(`ctrl-count-${code}`);
+      if (el) el.textContent = msg.count;
+    }
+  };
+}
+
+function showControlPanel(code, ws) {
+  // Find or create control panel in card
+  let panel = document.getElementById(`ctrl-${code}`);
+  const card = document.getElementById(`gcard-${code}`);
+  if (!card) return;
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = `ctrl-${code}`;
+    panel.className = 'control-panel show';
+    panel.style.width = '100%';
+    panel.innerHTML = `
+      <div style="font-size:13px;color:var(--green);font-weight:700;margin-bottom:10px">✅ 控制台已連線</div>
+      <div style="font-size:13px;color:#888;margin-bottom:12px">目前 <strong id="ctrl-count-${code}">—</strong> 人已加入</div>
+      <button class="btn btn-green" onclick="startGame('${code}')">▶ 開始遊戲</button>
+    `;
+    card.appendChild(panel);
+  }
+  panel.classList.add('show');
+}
+
+function startGame(code) {
+  const ws = gameWsMap[code];
+  if (!ws) { showToast('請先連接控制台'); return; }
+  if (confirm(`確定要開始遊戲 ${code} 嗎？`)) {
+    ws.send(JSON.stringify({ type: 'admin_start' }));
+    showToast('遊戲已開始！');
+  }
+}
+
+// ── QR Code ────────────────────────────────────────────────
+function showQR(code) {
+  const url = `${location.origin}/?code=${code}`;
+  document.getElementById('modal-code-text').textContent = code;
+  document.getElementById('modal-url').textContent = url;
+
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '';
+
+  new QRCode(container, {
+    text: url,
+    width: 220,
+    height: 220,
+    colorDark: '#2c1810',
+    colorLight: '#fffef9',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  document.getElementById('qr-modal').classList.add('show');
+}
+
+function closeQR() {
+  document.getElementById('qr-modal').classList.remove('show');
+}
+
+// ── Toast ──────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Init: auto-add 3 blank questions ──────────────────────
+window.onload = () => {
+  [0,1,2].forEach(() => addQuestion());
+};
+
+// Handle Enter on login
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeQR();
+});
+</script>
+</body>
+</html>
