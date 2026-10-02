@@ -220,6 +220,29 @@ app.get('/api/admin/games', (req, res) => {
   res.json(list);
 });
 
+// Get questions (admin)
+app.get('/api/admin/games/:code/questions', (req, res) => {
+  const { password } = req.query;
+  if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: '未授權' });
+  const game = games[req.params.code.toUpperCase()];
+  if (!game) return res.status(404).json({ error: '找不到遊戲' });
+  res.json({ questions: game.questions, status: game.status });
+});
+
+// Update questions (admin, only if waiting)
+app.put('/api/admin/games/:code/questions', (req, res) => {
+  const { password, questions } = req.body;
+  if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: '未授權' });
+  const game = games[req.params.code.toUpperCase()];
+  if (!game) return res.status(404).json({ error: '找不到遊戲' });
+  if (game.status !== 'waiting') return res.status(400).json({ error: '遊戲已開始，無法編輯' });
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    return res.status(400).json({ error: '請至少設定一題' });
+  }
+  game.questions = questions;
+  res.json({ ok: true });
+});
+
 // Verify game code (for players)
 app.get('/api/games/:code', (req, res) => {
   const game = games[req.params.code.toUpperCase()];
