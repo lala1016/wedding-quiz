@@ -182,6 +182,35 @@ body { background:var(--cream); font-family:'Noto Sans TC',sans-serif; color:var
 .toast.show { opacity:1; }
 
 .empty-state { text-align:center; padding:40px; color:#aaa; font-size:14px; }
+
+/* ── Questions modal ── */
+.q-modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.55);
+  display:none; align-items:flex-start; justify-content:center;
+  z-index:200; padding:16px; overflow-y:auto;
+}
+.q-modal-overlay.show { display:flex; }
+.q-modal {
+  background:var(--white); border-radius:24px; padding:28px 24px;
+  width:100%; max-width:520px; margin:auto;
+  box-shadow:0 16px 60px rgba(0,0,0,0.2);
+  animation:fadeUp 0.3s ease both;
+}
+.q-modal h2 { font-family:'Noto Serif TC',serif; font-size:18px; color:var(--brown); margin-bottom:4px; }
+.q-modal-subtitle { font-size:12px; color:#aaa; margin-bottom:16px; }
+.q-preview-item {
+  background:var(--cream); border-radius:12px; padding:14px;
+  border:1.5px solid var(--gold-light); margin-bottom:12px;
+}
+.q-preview-num { font-size:12px; font-weight:700; color:var(--gold); margin-bottom:6px; }
+.q-preview-q { font-size:14px; font-weight:500; color:var(--dark); margin-bottom:8px; }
+.q-preview-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.q-preview-opt {
+  font-size:12px; padding:5px 8px; border-radius:7px;
+  background:var(--white); color:#666;
+}
+.q-preview-opt.correct { background:rgba(90,154,111,0.15); color:var(--green); font-weight:700; }
+.q-modal-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
 </style>
 </head>
 <body>
@@ -235,6 +264,25 @@ body { background:var(--cream); font-family:'Noto Sans TC',sans-serif; color:var
       <div id="create-err" style="color:var(--rose);font-size:13px;margin-top:10px;display:none"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- Questions preview/edit modal -->
+<div class="q-modal-overlay" id="q-modal">
+  <div class="q-modal">
+    <h2>📋 題目列表</h2>
+    <div class="q-modal-subtitle" id="q-modal-subtitle"></div>
+    <div id="q-modal-body"></div>
+    <div class="q-modal-actions">
+      <button class="btn btn-outline" onclick="copyQuestionList()">📄 複製清單給主持人</button>
+      <button class="btn btn-gold" id="q-edit-btn" onclick="enterEditMode()">✏️ 編輯題目</button>
+      <button class="btn" style="background:#eee;color:#888" onclick="closeQModal()">關閉</button>
+    </div>
+    <div id="q-save-actions" style="display:none;margin-top:10px;display:none">
+      <button class="btn btn-gold" onclick="saveEditedQuestions()" style="margin-right:8px">💾 儲存修改</button>
+      <button class="btn btn-outline" onclick="cancelEdit()">取消</button>
+    </div>
+    <div id="q-modal-err" style="color:var(--rose);font-size:13px;margin-top:8px;display:none"></div>
   </div>
 </div>
 
@@ -475,6 +523,7 @@ function renderGameList(list) {
       </div>
       <div class="game-card-actions">
         <button class="btn btn-outline" onclick="showQR('${g.code}')">📱 QR Code</button>
+        <button class="btn btn-outline" onclick="showQuestions('${g.code}')">📋 題目</button>
         ${g.status === 'waiting' ? `<button class="btn btn-green" onclick="adminControlGame('${g.code}')">🎯 控制台</button>` : ''}
         <button class="btn btn-red" onclick="deleteGame('${g.code}')">🗑 刪除</button>
       </div>
@@ -569,8 +618,119 @@ function showToast(msg) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeQR();
+  if (e.key === 'Escape') { closeQR(); closeQModal(); }
 });
+
+// ── Questions preview / edit ───────────────────────────────
+let currentQCode = null;
+let currentQData = null;
+let isEditMode = false;
+
+async function showQuestions(code) {
+  currentQCode = code;
+  isEditMode = false;
+  const res = await fetch(`/api/admin/games/${code}/questions?password=${adminPassword}`);
+  const data = await res.json();
+  if (!data.questions) { showToast('無法載入題目'); return; }
+  currentQData = data.questions;
+  document.getElementById('q-modal-subtitle').textContent = `遊戲 ${code}　共 ${data.questions.length} 題　狀態：${statusLabel(data.status)}`;
+  const editBtn = document.getElementById('q-edit-btn');
+  editBtn.style.display = data.status === 'waiting' ? 'inline-block' : 'none';
+  renderQPreview(data.questions);
+  document.getElementById('q-save-actions').style.display = 'none';
+  document.getElementById('q-modal-err').style.display = 'none';
+  document.getElementById('q-modal').classList.add('show');
+}
+
+function renderQPreview(questions) {
+  const keys = ['A','B','C','D'];
+  document.getElementById('q-modal-body').innerHTML = questions.map((q, i) => `
+    <div class="q-preview-item">
+      <div class="q-preview-num">第 ${i+1} 題</div>
+      <div class="q-preview-q">${escHtml(q.question)}</div>
+      <div class="q-preview-opts">
+        ${q.options.map((opt, j) => `
+          <div class="q-preview-opt ${keys[j] === q.correct ? 'correct' : ''}">
+            ${keys[j]}. ${escHtml(opt)} ${keys[j] === q.correct ? '✓' : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function enterEditMode() {
+  isEditMode = true;
+  document.getElementById('q-edit-btn').style.display = 'none';
+  document.getElementById('q-save-actions').style.display = 'block';
+  // Render editable form
+  const keys = ['A','B','C','D'];
+  document.getElementById('q-modal-body').innerHTML = currentQData.map((q, i) => `
+    <div class="q-item" style="margin-bottom:12px" id="qe-${i}">
+      <div class="q-item-header">
+        <span class="q-num">第 ${i+1} 題</span>
+      </div>
+      <div class="field">
+        <label>題目</label>
+        <textarea rows="2" id="qe-q-${i}">${escHtml(q.question)}</textarea>
+      </div>
+      <div class="options-row">
+        ${q.options.map((opt, j) => `<input id="qe-opt-${i}-${j}" placeholder="${keys[j]}. 選項" value="${escHtml(opt)}">`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--brown);margin-top:10px;font-weight:500;">正確答案：</div>
+      <div class="correct-select">
+        ${keys.map(k => `<button class="correct-btn ${q.correct===k?'active':''}" onclick="setCorrect(this,'${k}')">${k}</button>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function cancelEdit() {
+  isEditMode = false;
+  document.getElementById('q-edit-btn').style.display = 'inline-block';
+  document.getElementById('q-save-actions').style.display = 'none';
+  renderQPreview(currentQData);
+}
+
+async function saveEditedQuestions() {
+  const keys = ['A','B','C','D'];
+  const updated = currentQData.map((_, i) => ({
+    question: document.getElementById(`qe-q-${i}`).value.trim(),
+    options: [0,1,2,3].map(j => document.getElementById(`qe-opt-${i}-${j}`).value.trim()),
+    correct: document.querySelector(`#qe-${i} .correct-btn.active`)?.textContent.trim() || 'A'
+  }));
+  const errEl = document.getElementById('q-modal-err');
+  for (let i=0; i<updated.length; i++) {
+    if (!updated[i].question || updated[i].options.some(o=>!o)) {
+      errEl.textContent = `第 ${i+1} 題有欄位未填寫`; errEl.style.display='block'; return;
+    }
+  }
+  const res = await fetch(`/api/admin/games/${currentQCode}/questions`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: adminPassword, questions: updated })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    currentQData = updated;
+    showToast('題目已儲存 ✅');
+    cancelEdit();
+  } else {
+    errEl.textContent = data.error || '儲存失敗'; errEl.style.display='block';
+  }
+}
+
+function copyQuestionList() {
+  const keys = ['A','B','C','D'];
+  const text = currentQData.map((q, i) =>
+    `第${i+1}題：${q.question}\n` +
+    q.options.map((o, j) => `${keys[j]}. ${o}${keys[j]===q.correct?' ✓':''}`).join('\n')
+  ).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => showToast('已複製！可貼給主持人 📋'));
+}
+
+function closeQModal() {
+  document.getElementById('q-modal').classList.remove('show');
+}
 </script>
 </body>
 </html>
