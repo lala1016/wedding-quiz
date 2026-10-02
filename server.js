@@ -169,10 +169,9 @@ function showAnswer(gameCode) {
     isLast: game.currentQuestion >= game.questions.length - 1,
   });
 
-  if (game.currentQuestion < game.questions.length - 1) {
-    if (game.timer) clearTimeout(game.timer);
-    game.timer = setTimeout(() => startNextQuestion(gameCode), ANSWER_SHOW_DURATION * 1000);
-  }
+  // Auto-proceed after showing answer (last question will trigger game_finished)
+  if (game.timer) clearTimeout(game.timer);
+  game.timer = setTimeout(() => startNextQuestion(gameCode), ANSWER_SHOW_DURATION * 1000);
 }
 
 // ─── REST API ─────────────────────────────────────────────────────────────────
